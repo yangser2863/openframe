@@ -25,9 +25,9 @@ type ProxyResponseBody = {
 }
 
 const ALLOWED_METHODS = new Set(['GET', 'POST', 'DELETE'])
-const MAX_PROXY_BODY_BYTES = 64 * 1024 * 1024
-const MAX_PROXY_RESPONSE_BYTES = 64 * 1024 * 1024
-const PROXY_TIMEOUT_MS = 5 * 60 * 1000
+const MAX_PROXY_BODY_BYTES = 128 * 1024 * 1024
+const MAX_PROXY_RESPONSE_BYTES = 128 * 1024 * 1024
+const PROXY_TIMEOUT_MS = 8 * 60 * 1000
 
 type RequestHeaders = Record<string, string | string[] | undefined>
 
@@ -191,6 +191,13 @@ export default async function handler(
     })
 
     const bytes = await readResponseBodyWithinLimit(upstream, MAX_PROXY_RESPONSE_BYTES)
+    // 新增：校验返回内容是否合法JSON
+    const rawText = new TextDecoder().decode(bytes)
+    try {
+      JSON.parse(rawText)
+    } catch (parseErr) {
+      throw new Error('Upstream returned invalid JSON')
+    }
 
     json(res, 200, {
       ok: true,
